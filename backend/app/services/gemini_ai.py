@@ -5,7 +5,7 @@ from app.config import settings
 
 # Free-tier friendly model: generous daily quota, no billing required.
 # See https://ai.google.dev/gemini-api/docs/models for current options.
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.6-flash"
 BASE_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
 
