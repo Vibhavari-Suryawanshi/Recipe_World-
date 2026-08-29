@@ -1,25 +1,12 @@
 import json
+import httpx
 from fastapi import HTTPException
-from anthropic import Anthropic
 from app.config import settings
 
-# claude-sonnet-5 gives the best quality; swap to claude-haiku-4-5-20251001
-# for a much cheaper/faster model if you're calling this a lot.
-MODEL = "claude-sonnet-5"
-
-_client: Anthropic | None = None
-
-
-def _get_client() -> Anthropic:
-    global _client
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="ANTHROPIC_API_KEY is not set on the server. Add it to backend/.env",
-        )
-    if _client is None:
-        _client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    return _client
+# Free-tier friendly model: generous daily quota, no billing required.
+# See https://ai.google.dev/gemini-api/docs/models for current options.
+MODEL = "gemini-2.5-flash"
+BASE_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
 
 def _extract_json(text: str) -> dict:
@@ -35,8 +22,42 @@ def _extract_json(text: str) -> dict:
         raise HTTPException(status_code=502, detail=f"AI returned invalid JSON: {e}")
 
 
+async def _generate(prompt: str) -> str:
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="GEMINI_API_KEY is not set on the server. Add it to backend/.env",
+        )
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "response_mime_type": "application/json",
+            "temperature": 0.8,
+            "maxOutputTokens": 2048,
+        },
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            BASE_URL,
+            params={"key": settings.GEMINI_API_KEY},
+            json=body,
+        )
+    if resp.status_code == 429:
+        raise HTTPException(
+            status_code=429,
+            detail="Gemini free-tier rate limit hit. Wait a bit and try again.",
+        )
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+
+    data = resp.json()
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise HTTPException(status_code=502, detail=f"Unexpected Gemini response: {data}")
+
+
 async def suggest_meals(ingredients: list[str], cuisine: str | None = None) -> list[dict]:
-    client = _get_client()
     cuisine_hint = f" Prefer {cuisine} cuisine if it fits." if cuisine else ""
     prompt = f"""You are a creative home-cooking assistant. The user has these ingredients
 available: {", ".join(ingredients)}.{cuisine_hint}
@@ -51,12 +72,7 @@ Respond with ONLY a JSON array (no prose, no markdown fences) where each item ma
   "estimated_minutes": number,
   "steps": string[] (4-8 concise, specific steps with amounts and times where relevant)
 }}"""
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=1800,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    text = "".join(b.text for b in resp.content if b.type == "text")
+    text = await _generate(prompt)
     data = _extract_json(text)
     if isinstance(data, dict):
         data = data.get("meals", data.get("suggestions", [data]))
@@ -64,7 +80,6 @@ Respond with ONLY a JSON array (no prose, no markdown fences) where each item ma
 
 
 async def translate_recipe(title: str, ingredients: list[str], steps: list[str], target_lang: str) -> dict:
-    client = _get_client()
     lang_name = {"hi": "Hindi", "mr": "Marathi"}.get(target_lang, target_lang)
     prompt = f"""Translate this recipe into {lang_name}. Keep ingredient quantities/units
 as-is (numbers stay numbers), translate ingredient names and instructions naturally,
@@ -78,10 +93,5 @@ Steps:
 
 Respond with ONLY JSON (no prose, no markdown fences):
 {{"title": string, "ingredients": string[], "steps": string[]}}"""
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=1800,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    text = "".join(b.text for b in resp.content if b.type == "text")
+    text = await _generate(prompt)
     return _extract_json(text)
