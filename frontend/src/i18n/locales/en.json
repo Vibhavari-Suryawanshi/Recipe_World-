@@ -1,0 +1,37 @@
+{
+  "appName": "Masala Atlas",
+  "tagline": "Every recipe, every cuisine, one search away.",
+  "nav": { "home": "Home", "whatCanICook": "What Can I Cook?" },
+  "search": {
+    "placeholder": "Search any dish, e.g. \"Thai green curry\"",
+    "button": "Search",
+    "resultsFor": "Results for",
+    "noResults": "No recipes found. Try another dish name.",
+    "cuisine": "Cuisine (optional)"
+  },
+  "recipe": {
+    "readyIn": "Ready in",
+    "servings": "Servings",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions",
+    "minutes": "min",
+    "step": "Step",
+    "translate": "Translate this recipe",
+    "translating": "Translating…",
+    "original": "Show original"
+  },
+  "cook": {
+    "title": "What can I cook?",
+    "subtitle": "Tell us what's in your kitchen — we'll find real recipes and ask our AI chef for creative ideas.",
+    "placeholder": "Add an ingredient and press Enter",
+    "add": "Add",
+    "findRecipes": "Find recipes",
+    "askAI": "Ask the AI chef",
+    "thinking": "Simmering some ideas…",
+    "matches": "Recipes you can make",
+    "aiIdeas": "AI chef suggestions",
+    "extraNeeded": "You'll also need",
+    "empty": "Add a few ingredients to get started."
+  },
+  "theme": { "light": "Light", "dark": "Dark" }
+}
