@@ -6,20 +6,21 @@ detailed step-by-step instructions with animated cooking illustrations
 English/Hindi/Marathi, and tell the AI chef what's in your fridge to get
 real recipe matches plus creative AI-generated ideas.
 
-```
+**Live site:** https://recipe-world-jade.vercel.app
+**Backend API:** https://recipe-world-xaw4.onrender.com/docs
+
 recipe-world/
-├── backend/     FastAPI — proxies Spoonacular, calls Claude for AI features
-└── frontend/    React + Vite + Tailwind + Framer Motion
-```
+├── backend/ FastAPI — proxies Spoonacular, calls Gemini for AI features
+└── frontend/ React + Vite + Tailwind + Framer Motion
 
 ## 1. Get your free API keys
 
 | Service | What it's for | Get a key |
 |---|---|---|
 | Spoonacular | Recipe search, details, ingredient matching (150 free req/day) | https://spoonacular.com/food-api |
-| Anthropic | "What can I cook" AI ideas + recipe translation | https://console.anthropic.com |
+| Google Gemini | "What can I cook" AI ideas + recipe translation (free tier, no card) | https://aistudio.google.com/apikey |
 
-## 2. Run the backend
+## 2. Run the backend locally
 
 ```bash
 cd backend
@@ -29,9 +30,9 @@ cp .env.example .env        # then paste your two API keys into .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Backend now runs at `http://localhost:8000` (docs at `/docs`).
+Backend now runs at `http://localhost:8000` (interactive docs at `/docs`).
 
-## 3. Run the frontend
+## 3. Run the frontend locally
 
 ```bash
 cd frontend
@@ -41,6 +42,24 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+## 4. Deploying it yourself
+
+**Backend → Render**
+- New Web Service → connect the repo → Root Directory: `backend`
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Environment variables: `SPOONACULAR_API_KEY`, `GEMINI_API_KEY`, and (once
+  you have your frontend URL) `FRONTEND_ORIGIN`
+- Also set `PYTHON_VERSION=3.11.9` as an environment variable — Render's
+  default Python version can be too new for some dependencies to build.
+
+**Frontend → Vercel**
+- Add New Project → connect the repo → Root Directory: `frontend`
+- Environment variable: `VITE_API_BASE_URL` = your Render URL
+- Because this is a single-page app with client-side routing, Vercel needs
+  `frontend/vercel.json` (already included) so refreshing a route like
+  `/what-can-i-cook` doesn't 404.
 
 ## What's implemented
 
@@ -53,11 +72,11 @@ Open `http://localhost:5173`.
   a whisk. Add more mappings in `KEYWORD_MAP`.
 - **What Can I Cook?** — add ingredients as chips, then either:
   - *Find recipes*: real matches from Spoonacular's `findByIngredients`.
-  - *Ask the AI chef*: Claude returns 3 structured, creative suggestions
+  - *Ask the AI chef*: Gemini returns 3 structured, creative suggestions
     (title, why it works, extra ingredients needed, timed steps) — see
-    `backend/app/services/claude_ai.py`.
+    `backend/app/services/gemini_ai.py`.
 - **Translate this recipe** — when the UI language is Hindi or Marathi, a
-  button on the recipe page asks Claude to translate the title, ingredients
+  button on the recipe page asks Gemini to translate the title, ingredients
   and steps, keeping quantities intact.
 - **Dark / light mode** — persisted to `localStorage`, respects the OS
   preference on first visit.
@@ -66,15 +85,24 @@ Open `http://localhost:5173`.
   staggered result animations (Framer Motion), all respecting
   `prefers-reduced-motion`.
 
+## Notes on the AI provider
+
+This project uses the Gemini API's free tier (`gemini-3.6-flash`) so it costs
+nothing to run at small scale. Two things worth knowing:
+- Gemini 3.x models "think" before answering by default, and those tokens
+  count against `maxOutputTokens` — `gemini_ai.py` sets `thinkingLevel: low`
+  and a generous token budget so responses don't get cut off mid-JSON.
+- Google's free tier may use prompts/outputs to improve their models — a
+  reasonable trade for free usage on a project like this, but worth knowing.
+
 ## Where to take it next
 
-- Swap Spoonacular for your own recipe database (Postgres + a scraper or a
-  seeded dataset) if you want full control / no rate limit — the backend's
-  `services/spoonacular.py` is the only file that would need to change.
+- Swap Spoonacular for your own recipe database if you want full control /
+  no rate limit — `services/spoonacular.py` is the only file that would need
+  to change.
 - Cache AI responses (e.g. Redis) so repeat ingredient combos don't re-call
   the API.
 - Add more `ProcessAnimation` types (grating, kneading, deglazing...) as you
   notice instructions that fall through to the generic "cook" glyph.
-- Deploy: frontend to Vercel/Netlify, backend to Render/Fly.io/Railway —
-  remember to set `FRONTEND_ORIGIN` on the backend and `VITE_API_BASE_URL`
-  on the frontend to your real deployed URLs.
+- Render's free tier sleeps after inactivity — the first request after a
+  while can take 30-50 seconds while it wakes back up.
