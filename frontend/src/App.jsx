@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import MobileTabBar from "./components/MobileTabBar";
 import FloatingBackground from "./components/FloatingBackground";
 import Home from "./pages/Home";
 import SearchResults from "./pages/SearchResults";
@@ -8,7 +9,7 @@ import WhatCanICook from "./pages/WhatCanICook";
 
 export default function App() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-16 sm:pb-0">
       <FloatingBackground />
       <Navbar />
       <Routes>
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/recipe/:id" element={<RecipeDetail />} />
         <Route path="/what-can-i-cook" element={<WhatCanICook />} />
       </Routes>
+      <MobileTabBar />
     </div>
   );
 }
