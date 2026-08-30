@@ -20,7 +20,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <nav className="hidden sm:flex items-center gap-6 font-body text-sm">
+        <nav className="flex items-center gap-3 sm:gap-6 font-body text-xs sm:text-sm">
           <Link to="/" className="hover:text-chili transition-colors">
             {t("nav.home")}
           </Link>
