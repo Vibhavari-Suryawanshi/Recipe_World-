@@ -32,8 +32,8 @@ async def _generate(prompt: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "response_mime_type": "application/json",
-            "temperature": 0.8,
-            "maxOutputTokens": 2048,
+            "maxOutputTokens": 4096,
+            "thinkingConfig": {"thinkingLevel": "low"},
         },
     }
     async with httpx.AsyncClient(timeout=30) as client:
